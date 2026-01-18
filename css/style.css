@@ -1,0 +1,112 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Marker panel container */
+#marker-panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;       /* move to top-right */
+  z-index: 1000;
+  font-family: sans-serif;
+  max-width: 360px;   /* reasonable on tablet/desktop */
+  max-height: 95vh;   /* allow panel to fill most of the screen */
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+  padding: 12px;
+}
+
+/* Toggle button */
+#togglePanelBtn {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  background-color: #3388ff;
+  color: white;
+  border: none;
+  margin-bottom: 4px;
+}
+
+/* Panel content */
+#panelContent {
+  display: block; /* default open */
+}
+
+/* Input rows stacked */
+#panelContent .input-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+/* Labels */
+#panelContent label {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+/* Inputs and selects */
+#panelContent input,
+#panelContent select {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+/* Buttons */
+#panelContent button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  background-color: #3388ff;
+  color: white;
+  border: none;
+}
+
+/* Marker and line lists */
+#markerList, #lineList {
+  list-style: none;
+  padding-left: 0;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+#markerList li, #lineList li {
+  cursor: pointer;
+  padding: 6px 4px;
+  border-bottom: 1px solid #ddd;
+}
+
+#markerList li:hover, #lineList li:hover {
+  background-color: #f0f0f0;
+}
+
+/* Responsive adjustments for very small screens */
+@media (max-width: 480px) {
+  #marker-panel {
+    max-width: 95%;      /* almost full width on small phones */
+    right: 1%;
+    top: 5px;
+    max-height: 95vh;
+  }
+}

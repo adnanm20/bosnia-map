@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bosnia & Herzegovina Map</title>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <!-- Leaflet Draw -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+  />
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+	<div id="marker-panel">
+	  <button id="togglePanelBtn">Markers & Circles ▼</button>
+	  <div id="panelContent">
+	    <div class="input-row">
+	      <label for="latInput">Latitude:</label>
+	      <input type="number" id="latInput" step="0.000001" placeholder="Enter lat">
+	    </div>
+	
+	    <div class="input-row">
+	      <label for="lngInput">Longitude:</label>
+	      <input type="number" id="lngInput" step="0.000001" placeholder="Enter lng">
+	    </div>
+	
+	    <div class="input-row">
+	      <label for="markerName">Marker Name:</label>
+	      <input type="text" id="markerName" placeholder="Enter name">
+	    </div>
+	
+	    <div class="input-row">
+	      <label for="circleRadius">Circle Radius (meters / marker only):</label>
+	      <select id="circleRadius">
+	        <option value="0" selected>Marker only</option>
+	        <option value="500">500 m</option>
+	        <option value="1000">1 km</option>
+	        <option value="5000">5 km</option>
+	        <option value="10000">10 km</option>
+	        <option value="50000">50 km</option>
+	        <option value="100000">100 km</option>
+	      </select>
+	    </div>
+	
+	    <button id="addMarkerBtn">Add Marker & Circle</button>
+	
+	    <h4>Markers List:</h4>
+	    <ul id="markerList"></ul>
+	
+	    <h4>Connect Markers:</h4>
+	    <select id="lineMarker1">
+	      <option value="">Select first marker</option>
+	    </select>
+	    <select id="lineMarker2">
+	      <option value="">Select second marker</option>
+	    </select>
+	    <button id="connectMarkersBtn">Connect</button>
+	
+	    <h4>Lines:</h4>
+	    <ul id="lineList"></ul>
+	  </div>
+	</div>
+
+  <div id="map"></div>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Leaflet Draw -->
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <script src="js/map.js"></script>
+</body>
+</html>
+
