@@ -108,7 +108,7 @@ L.control.layers(null, {
   "Cantons": cantonsLayer,
   "Municipalities": municipalitiesLayer,
   "Roads": roadsLayer
-}).addTo(map);
+}, { position: "bottomleft" }).addTo(map);
 
 // ====== Draw Control ======
 // Create FeatureGroup for drawn layers
