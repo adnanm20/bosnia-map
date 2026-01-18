@@ -171,12 +171,27 @@ addMarkerBtn.addEventListener('click', () => {
     .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`);
 
   // Place circle only if radius > 0
+	const defaultColor = '3388ff40'; // rrggbbaa
+	const parsed = parseRRGGBBAA(defaultColor);
   let circle = null;
   if (radius > 0) {
-    circle = L.circle([lat, lng], { radius, color: 'blue', fillOpacity: 0.1 }).addTo(drawnItems);
+		circle = L.circle([lat, lng], {
+		  radius,
+		  color: parsed.stroke,        // full opacity stroke
+		  fillColor: parsed.fill,
+		  fillOpacity: parsed.fillOpacity
+		}).addTo(drawnItems);
   }
 
-  markers.push({ name, marker, circle, lat, lng });
+	markers.push({
+	  name,
+	  marker,
+	  circle,
+	  lat,
+	  lng,
+	  color: defaultColor
+	});
+
 	// Update marker dropdowns
 	function updateMarkerDropdowns() {
 	  const select1 = document.getElementById('lineMarker1');
@@ -200,9 +215,46 @@ addMarkerBtn.addEventListener('click', () => {
 
 
   // Add to list
-  const li = document.createElement('li');
-  li.textContent = name;
-  li.style.cursor = 'pointer';
+	const li = document.createElement('li');
+	li.style.cursor = 'pointer';
+	
+	li.innerHTML = `
+	  <div style="display:flex; flex-direction:column; gap:4px;">
+	    <strong>${name}</strong>
+	    ${circle ? `
+	      <input
+	        type="text"
+	        value="${defaultColor}"
+	        maxlength="8"
+	        placeholder="rrggbbaa"
+	        style="font-family:monospace; padding:4px;"
+	      >
+	    ` : ''}
+	  </div>
+	`;
+
+	if (circle) {
+	  const colorInput = li.querySelector('input');
+	
+	  colorInput.addEventListener('input', () => {
+	    const value = colorInput.value.trim();
+	    const parsed = parseRRGGBBAA(value);
+	
+	    if (!parsed) {
+	      colorInput.style.borderColor = 'red';
+	      return;
+	    }
+	
+	    colorInput.style.borderColor = '';
+	    markers.find(m => m.marker === marker).color = value;
+	
+	    circle.setStyle({
+	      color: parsed.stroke,       // always full opacity
+	      fillColor: parsed.fill,
+	      fillOpacity: parsed.fillOpacity
+	    });
+	  });
+	}
 
   // Click to zoom
   li.addEventListener('click', () => {
@@ -260,17 +312,25 @@ document.getElementById('connectMarkersBtn').addEventListener('click', () => {
   const m2 = markers[idx2].marker.getLatLng();
 
   // Draw polyline between two markers
-  const line = L.polyline([m1, m2], { color: 'red', weight: 2 }).addTo(drawnItems);
+	const distanceMeters = m1.distanceTo(m2);
+	
+	const line = L.polyline([m1, m2], {
+	  color: 'red',
+	  weight: 3
+	}).addTo(drawnItems);
+	
+	// Optional popup on the line
+	line.bindPopup(`Distance: ${formatDistance(distanceMeters)}`);
 
   // Optional: store line if needed
-	addLineToList(idx1, idx2, line);
+	addLineToList(idx1, idx2, line, distanceMeters);
 });
 
 const lineList = document.getElementById('lineList');
 
-function addLineToList(idx1, idx2, line) {
+function addLineToList(idx1, idx2, line, distanceMeters) {
   const li = document.createElement('li');
-  li.textContent = `${markers[idx1].name} ↔ ${markers[idx2].name}`;
+	li.textContent = `${markers[idx1].name} ↔ ${markers[idx2].name} (${formatDistance(distanceMeters)})`;
   li.style.cursor = 'pointer';
 
   // Right-click to delete line
@@ -281,6 +341,39 @@ function addLineToList(idx1, idx2, line) {
     lines = lines.filter(l => l.line !== line);
   });
 
+	li.addEventListener('click', () => {
+	  map.fitBounds(line.getBounds(), { padding: [20, 20] });
+	  line.openPopup();
+	});
+
+	lines.push({
+	  marker1: idx1,
+	  marker2: idx2,
+	  line,
+	  distance: distanceMeters
+	});
+
   lineList.appendChild(li);
+}
+
+function parseRRGGBBAA(hex) {
+  if (!/^[0-9a-fA-F]{8}$/.test(hex)) return null;
+
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  const a = parseInt(hex.slice(6, 8), 16) / 255;
+
+  return {
+    stroke: `rgb(${r},${g},${b})`,
+    fill: `rgba(${r},${g},${b},${a})`,
+    fillOpacity: a
+  };
+}
+
+function formatDistance(meters) {
+  return meters >= 1000
+    ? (meters / 1000).toFixed(2) + ' km'
+    : Math.round(meters) + ' m';
 }
 
