@@ -3,9 +3,13 @@
 // --------------------
 const map = L.map('map', {
   center: [44.0, 17.5], // Bosnia & Herzegovina
+	maxBounds: [[37.640335,0],[49.553726,35.826416]],
   zoom: 7,
   minZoom: 7
 });
+L.control.scale({
+	imperial: false
+}).addTo(map);
 
 // Base map (OpenStreetMap)
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
