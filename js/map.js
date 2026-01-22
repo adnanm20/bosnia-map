@@ -1,224 +1,174 @@
-// --------------------
-// Map initialization
-// --------------------
-const map = L.map('map', {
-  center: [44.0, 17.5], // Bosnia & Herzegovina
-	maxBounds: [[37.640335,0],[49.553726,35.826416]],
-  zoom: 7,
-  minZoom: 7
-});
-L.control.scale({
-	imperial: false
-}).addTo(map);
-
-// Base map (OpenStreetMap)
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
-
-// Move zoom control to bottom-right
-map.zoomControl.setPosition('bottomright');
-
-// --------------------
-// GeoJSON layers
-// --------------------
-
-// Country outline (default visible)
-const countryLayer = L.geoJSON(null, {
-  style: {
-    color: '#000',
-    weight: 2,
-    fill: false
-  }
-}).addTo(map);
-
-// Entities
-const entitiesLayer = L.geoJSON(null, {
-  style: {
-    color: '#1f78b4',
-    weight: 2,
-    fill: false
-  }
-});
-
-// Cantons
-const cantonsLayer = L.geoJSON(null, {
-  style: {
-    color: '#33a02c',
-    weight: 1.5,
-    fill: false
-  }
-});
-
-// Municipalities
-const municipalitiesLayer = L.geoJSON(null, {
-  style: {
-    color: '#33a02c',
-    weight: 1.5,
-    fill: false
-  }
-});
-
-// Municipalities
-const roadsLayer = L.geoJSON(null, {
-  style: {
-    color: '#33a02c',
-    weight: 1.5,
-    fill: false
-  }
-});
-
-// Load GeoJSON data
-fetch('data/bh_country.geojson')
-  .then(r => r.json())
-  .then(data => countryLayer.addData(data));
-
-fetch('data/bh_entities.geojson')
-  .then(r => r.json())
-  .then(data => entitiesLayer.addData(data));
-
-fetch('data/bh_cantons.geojson')
-  .then(r => r.json())
-  .then(data => cantonsLayer.addData(data));
-
-fetch('data/bh_municipalities.geojson')
-  .then(r => r.json())
-  .then(data => municipalitiesLayer.addData(data));
-
-// ====== Load Roads ======
-fetch('data/bh_roads_filtered_noresid.geojson')
-  .then(res => res.json())
-  .then(data => {
-    L.geoJSON(data, {
-      style: feature => {
-        const type = feature.properties.highway;
-        let color = '#999', weight = 1;
-        if (type === 'motorway') { color='#e31a1c'; weight=3; }
-        else if (type==='primary') { color='#fd8d3c'; weight=2.5; }
-        else if (type==='secondary') { color='#fecc5c'; weight=2; }
-        else if (type==='tertiary') { color='#a1dab4'; weight=1.5; }
-        else if (type==='residential') { color='#bbbbbb'; weight=1; }
-        return { color, weight };
-      }
-    }).addTo(roadsLayer);
-  });
-
-// --------------------
-// Layer control
-// --------------------
-L.control.layers(null, {
-  "Country Outline": countryLayer,
-  "Entities": entitiesLayer,
-  "Cantons": cantonsLayer,
-  "Municipalities": municipalitiesLayer,
-  "Roads": roadsLayer
-}, { position: "bottomleft" }).addTo(map);
-
-// ====== Draw Control ======
-// Create FeatureGroup for drawn layers
 const drawnItems = new L.FeatureGroup();
-map.addLayer(drawnItems);
-
-// Handle created layers
-map.on(L.Draw.Event.CREATED, function (event) {
-  const layer = event.layer;
-  drawnItems.addLayer(layer);
-});
-
-// ====== Marker & Circle Panel ======
-let lines = []; // store connected lines
-let markers = [];
-let tempMarker = null;
-
-const togglePanelBtn = document.getElementById('togglePanelBtn');
-const panelContent = document.getElementById('panelContent');
 const latInput = document.getElementById('latInput');
 const lngInput = document.getElementById('lngInput');
 const markerNameInput = document.getElementById('markerName');
 const circleRadiusSelect = document.getElementById('circleRadius');
-const addMarkerBtn = document.getElementById('addMarkerBtn');
 const markerList = document.getElementById('markerList');
+const lineList = document.getElementById('lineList');
+let lines = [];
+let markers = [];
+let tempMarker = null;
 
-panelContent.style.display = 'block'; // open by default
+function main() {
+	addEventListeners();
+	let map = initializeMap();
+	let layers = createLayers(map);
+	loadGeoJSONdata(layers);
+	addLayersToMap(map, layers);
+}
+main();
 
-togglePanelBtn.addEventListener('click', () => {
-  if (panelContent.style.display === 'none') {
-    panelContent.style.display = 'block';
-    togglePanelBtn.textContent = 'Markers & Circles ▼';
-  } else {
-    panelContent.style.display = 'none';
-    togglePanelBtn.textContent = 'Markers & Circles ►';
-  }
-});
+function initializeMap() {
+	const map = L.map('map', {
+	  center: [44.0, 17.5], // Bosnia & Herzegovina
+		maxBounds: [[37.640335,0],[49.553726,35.826416]],
+	  zoom: 7,
+	  minZoom: 7
+	});
+	L.control.scale({
+		imperial: false
+	}).addTo(map);
+	
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	  attribution: '&copy; OpenStreetMap contributors'
+	}).addTo(map);
+	
+	map.zoomControl.setPosition('bottomright');
 
-// ====== Map click fills coordinates & temp marker ======
-map.on('click', (e) => {
-  latInput.value = e.latlng.lat.toFixed(6);
-  lngInput.value = e.latlng.lng.toFixed(6);
+	map.on('click', fillCoordinateFields);
 
-  if (tempMarker) tempMarker.setLatLng(e.latlng);
-  else tempMarker = L.marker(e.latlng, { opacity: 0.6 }).addTo(drawnItems);
-});
-
-// ====== Add Marker & Circle ======
-addMarkerBtn.addEventListener('click', () => {
-  const lat = parseFloat(latInput.value);
-  const lng = parseFloat(lngInput.value);
-  const name = markerNameInput.value.trim();
-  const radius = parseInt(circleRadiusSelect.value, 10); // NEW
-
-  if (isNaN(lat) || isNaN(lng)) { alert('Enter valid coordinates'); return; }
-  if (!name) { alert('Enter a name'); return; }
-
-  // Place marker
-  const marker = L.marker([lat, lng]).addTo(drawnItems)
-    .bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`);
-
-  // Place circle only if radius > 0
-	const defaultColor = '3388ff40'; // rrggbbaa
-	const parsed = parseRRGGBBAA(defaultColor);
-  let circle = null;
-  if (radius > 0) {
-		circle = L.circle([lat, lng], {
-		  radius,
-		  color: parsed.stroke,        // full opacity stroke
-		  fillColor: parsed.fill,
-		  fillOpacity: parsed.fillOpacity
-		}).addTo(drawnItems);
-  }
-
-	markers.push({
-	  name,
-	  marker,
-	  circle,
-	  lat,
-	  lng,
-	  color: defaultColor
+	map.addLayer(drawnItems);
+	
+	map.on(L.Draw.Event.CREATED, function (event) {
+	  const layer = event.layer;
+	  drawnItems.addLayer(layer);
 	});
 
-	// Update marker dropdowns
-	function updateMarkerDropdowns() {
-	  const select1 = document.getElementById('lineMarker1');
-	  const select2 = document.getElementById('lineMarker2');
-	
-	  // Clear all options except the placeholder
-	  [select1, select2].forEach(sel => {
-	    const placeholder = sel.options[0].text;
-	    sel.innerHTML = `<option value="">${placeholder}</option>`;
-	  });
-	
-	  // Add current markers
-	  markers.forEach((m, idx) => {
-	    const option = `<option value="${idx}">${m.name}</option>`;
-	    select1.innerHTML += option;
-	    select2.innerHTML += option;
-	  });
-	}
-	
-	updateMarkerDropdowns();
+	return map;
+}
 
+function createLayers(map) {
+	let layers = {};
+	layers[COUNTRY_LAYER] = L.geoJSON(null, {
+	  style: {
+	    color: '#000',
+	    weight: 2,
+	    fill: false
+	  }
+	}).addTo(map);
+	
+	layers[ENTITIES_LAYER] = L.geoJSON(null, {
+	  style: {
+	    color: '#1f78b4',
+	    weight: 2,
+	    fill: false
+	  }
+	});
+	
+	layers[CANTONS_LAYER] = L.geoJSON(null, {
+	  style: {
+	    color: '#33a02c',
+	    weight: 1.5,
+	    fill: false
+	  }
+	});
+	
+	layers[MUNICIPALITIES_LAYER] = L.geoJSON(null, {
+	  style: {
+	    color: '#33a02c',
+	    weight: 1.5,
+	    fill: false
+	  }
+	});
+	
+	layers[ROADS_LAYER] = L.geoJSON(null, {
+	  style: {
+	    color: '#33a02c',
+	    weight: 1.5,
+	    fill: false
+	  }
+	});
 
-  // Add to list
+	return layers;
+}
+
+function loadGeoJSONdata(layers) {
+	fetch('data/bh_country.geojson')
+	  .then(r => r.json())
+	  .then(data => layers[COUNTRY_LAYER].addData(data));
+	
+	fetch('data/bh_entities.geojson')
+	  .then(r => r.json())
+	  .then(data => layers[ENTITIES_LAYER].addData(data));
+	
+	fetch('data/bh_cantons.geojson')
+	  .then(r => r.json())
+	  .then(data => layers[CANTONS_LAYER].addData(data));
+	
+	fetch('data/bh_municipalities.geojson')
+	  .then(r => r.json())
+	  .then(data => layers[MUNICIPALITIES_LAYER].addData(data));
+	
+	fetch('data/bh_roads_filtered_noresid.geojson')
+	  .then(res => res.json())
+	  .then(data => {
+	    L.geoJSON(data, {
+	      style: feature => {
+	        const type = feature.properties.highway;
+	        let color = '#999', weight = 1;
+	        if (type === 'motorway') { color='#e31a1c'; weight=3; }
+	        else if (type==='primary') { color='#fd8d3c'; weight=2.5; }
+	        else if (type==='secondary') { color='#fecc5c'; weight=2; }
+	        else if (type==='tertiary') { color='#a1dab4'; weight=1.5; }
+	        else if (type==='residential') { color='#bbbbbb'; weight=1; }
+	        return { color, weight };
+	      }
+	    }).addTo(layers[ROADS_LAYER]);
+	  });
+}
+
+function addLayersToMap(map, layers) {
+	L.control.layers(null, {
+	  "Country Outline": layers[COUNTRY_LAYER],
+	  "Entities": layers[ENTITIES_LAYER],
+	  "Cantons": layers[CANTONS_LAYER],
+	  "Municipalities": layers[MUNICIPALITIES_LAYER],
+	  "Roads": layers[ROADS_LAYER]
+	}, { position: "bottomleft" }).addTo(map);
+}
+
+function placeCircle(lat, lng, radius) {
+	const parsed = parseRRGGBBAA(CIRCLE_DEFAULT_COLOR);
+	circle = L.circle([lat, lng], {
+	  radius,
+	  color: parsed.stroke,
+	  fillColor: parsed.fill,
+	  fillOpacity: parsed.fillOpacity
+	}).addTo(drawnItems);
+}
+
+function updateMarkerDropdowns() {
+  const select1 = document.getElementById('lineMarker1');
+  const select2 = document.getElementById('lineMarker2');
+
+  [select1, select2].forEach(sel => {
+    const placeholder = sel.options[0].text;
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+  });
+
+  markers.forEach((m, idx) => {
+    const option = `<option value="${idx}">${m.name}</option>`;
+    select1.innerHTML += option;
+    select2.innerHTML += option;
+  });
+}
+
+function placeMarker(lat, lng, name) {
+	return L.marker([lat, lng]).addTo(drawnItems)
+  	.bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`);
+}
+
+function addMarkerToList(name, circle) {
 	const li = document.createElement('li');
 	li.style.cursor = 'pointer';
 	
@@ -228,7 +178,7 @@ addMarkerBtn.addEventListener('click', () => {
 	    ${circle ? `
 	      <input
 	        type="text"
-	        value="${defaultColor}"
+	        value="${CIRCLE_DEFAULT_COLOR}"
 	        maxlength="8"
 	        placeholder="rrggbbaa"
 	        style="font-family:monospace; padding:4px;"
@@ -250,94 +200,49 @@ addMarkerBtn.addEventListener('click', () => {
 	    }
 	
 	    colorInput.style.borderColor = '';
-	    markers.find(m => m.marker === marker).color = value;
+	    markers.find(m => m.circle === circle).color = value;
 	
 	    circle.setStyle({
-	      color: parsed.stroke,       // always full opacity
+	      color: parsed.stroke,
 	      fillColor: parsed.fill,
 	      fillOpacity: parsed.fillOpacity
 	    });
 	  });
 	}
 
-  // Click to zoom
   li.addEventListener('click', () => {
     map.setView([lat, lng], 14);
     marker.openPopup();
   });
 
-  // Right-click to delete marker and circle
 	li.addEventListener('contextmenu', (e) => {
 	  e.preventDefault();
 	
-	  // Remove marker and its circle
 	  drawnItems.removeLayer(marker);
 	  if (circle) drawnItems.removeLayer(circle);
 	
-	  // Remove all lines connected to this marker
 	  lines.filter(l => l.marker1 == idx || l.marker2 == idx).forEach(l => {
 	    drawnItems.removeLayer(l.line);
-	    // Remove from list
 	    Array.from(lineList.children).forEach(li => {
 	      if (li.textContent.includes(markers[idx].name)) li.remove();
 	    });
 	  });
 	  lines = lines.filter(l => l.marker1 != idx && l.marker2 != idx);
 	
-	  // Remove marker from markers array
 	  li.remove();
 	  markers = markers.filter(m => m.marker !== marker);
 	
-	  // Update dropdowns
 	  updateMarkerDropdowns();
 	});
 
   markerList.appendChild(li);
-
-  // Clear input
-  markerNameInput.value = '';
-  if (tempMarker) { drawnItems.removeLayer(tempMarker); tempMarker = null; }
-});
-
-document.getElementById('connectMarkersBtn').addEventListener('click', () => {
-  const idx1 = document.getElementById('lineMarker1').value;
-  const idx2 = document.getElementById('lineMarker2').value;
-
-  if (idx1 === "" || idx2 === "") {
-    alert("Please select both markers");
-    return;
-  }
-  if (idx1 === idx2) {
-    alert("Cannot connect the same marker");
-    return;
-  }
-
-  const m1 = markers[idx1].marker.getLatLng();
-  const m2 = markers[idx2].marker.getLatLng();
-
-  // Draw polyline between two markers
-	const distanceMeters = m1.distanceTo(m2);
+}
 	
-	const line = L.polyline([m1, m2], {
-	  color: 'red',
-	  weight: 3
-	}).addTo(drawnItems);
-	
-	// Optional popup on the line
-	line.bindPopup(`Distance: ${formatDistance(distanceMeters)}`);
-
-  // Optional: store line if needed
-	addLineToList(idx1, idx2, line, distanceMeters);
-});
-
-const lineList = document.getElementById('lineList');
-
 function addLineToList(idx1, idx2, line, distanceMeters) {
   const li = document.createElement('li');
 	li.textContent = `${markers[idx1].name} ↔ ${markers[idx2].name} (${formatDistance(distanceMeters)})`;
   li.style.cursor = 'pointer';
 
-  // Right-click to delete line
   li.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     drawnItems.removeLayer(line);
@@ -360,24 +265,88 @@ function addLineToList(idx1, idx2, line, distanceMeters) {
   lineList.appendChild(li);
 }
 
-function parseRRGGBBAA(hex) {
-  if (!/^[0-9a-fA-F]{8}$/.test(hex)) return null;
-
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  const a = parseInt(hex.slice(6, 8), 16) / 255;
-
-  return {
-    stroke: `rgb(${r},${g},${b})`,
-    fill: `rgba(${r},${g},${b},${a})`,
-    fillOpacity: a
-  };
+function addLineToMap(m1, m2, distanceMeters) {
+	const line = L.polyline([m1, m2], {
+	  color: 'red',
+	  weight: 3
+	}).addTo(drawnItems);
+	
+	line.bindPopup(`Distance: ${formatDistance(distanceMeters)}`);
 }
 
-function formatDistance(meters) {
-  return meters >= 1000
-    ? (meters / 1000).toFixed(2) + ' km'
-    : Math.round(meters) + ' m';
+function fillCoordinateFields(e) {
+	latInput.value = e.latlng.lat.toFixed(6);
+	lngInput.value = e.latlng.lng.toFixed(6);
+	
+	if (tempMarker) tempMarker.setLatLng(e.latlng);
+	else tempMarker = L.marker(e.latlng, { opacity: 0.6 }).addTo(drawnItems);
 }
 
+function addEventListeners() {
+	const panelContent = document.getElementById('panelContent');
+	panelContent.style.display = 'block';
+	document.getElementById('togglePanelBtn').addEventListener('click', () => {
+	  if (panelContent.style.display === 'none') {
+	    panelContent.style.display = 'block';
+	    togglePanelBtn.textContent = 'Markers & Circles ▼';
+	  } else {
+	    panelContent.style.display = 'none';
+	    togglePanelBtn.textContent = 'Markers & Circles ►';
+	  }
+	});
+	
+	document.getElementById('connectMarkersBtn').addEventListener('click', () => {
+	  const idx1 = document.getElementById('lineMarker1').value;
+	  const idx2 = document.getElementById('lineMarker2').value;
+	
+	  if (idx1 === "" || idx2 === "") {
+	    alert("Please select both markers");
+	    return;
+	  }
+	  if (idx1 === idx2) {
+	    alert("Cannot connect the same marker");
+	    return;
+	  }
+	
+	  const m1 = markers[idx1].marker.getLatLng();
+	  const m2 = markers[idx2].marker.getLatLng();
+	
+		const distanceMeters = m1.distanceTo(m2);
+	
+		addLineToMap(m1, m2, distanceMeters);
+		
+		addLineToList(idx1, idx2, line, distanceMeters);
+	});
+	
+	document.getElementById('addMarkerBtn').addEventListener('click', () => {
+	  const lat = parseFloat(latInput.value);
+	  const lng = parseFloat(lngInput.value);
+	  const name = markerNameInput.value.trim();
+	  const radius = parseInt(circleRadiusSelect.value, 10);
+	
+	  if (isNaN(lat) || isNaN(lng)) { alert('Enter valid coordinates'); return; }
+	  if (!name) { alert('Enter a name'); return; }
+	
+	  // Place marker
+	  const marker = placeMarker(lat, lng, name);
+	
+	  // Place circle only if radius > 0
+		let circle = radius > 0 ? placeCircle(lat, lng, radius) : null;
+	
+		markers.push({
+		  name,
+		  marker,
+		  circle,
+		  lat,
+		  lng,
+		  color: CRICLE_DEFAULT_COLOR
+		});
+	
+		updateMarkerDropdowns();
+	
+		addMarkerToList(name, circle);
+	
+	  markerNameInput.value = '';
+	  if (tempMarker) { drawnItems.removeLayer(tempMarker); tempMarker = null; }
+	});
+}

@@ -1,0 +1,6 @@
+COUNTRY_LAYER='countryLayer'
+ENTITIES_LAYER='entitiesLayer'
+CANTONS_LAYER='cantonsLayer'
+MUNICIPALITIES_LAYER='municipalitiesLayer'
+ROADS_LAYER='roadsLayer'
+CIRCLE_DEFAULT_COLOR='3388ff40'

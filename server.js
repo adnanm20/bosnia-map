@@ -13,6 +13,8 @@ const FILES = {
   "/index.html": "index.html",
   "/css/style.css": "css/style.css",
   "/js/map.js": "js/map.js",
+  "/js/constants.js": "js/constants.js",
+  "/js/utils.js": "js/utils.js",
 	"/data/bh_country.geojson": "data/bh_country.geojson",
 	"/data/bh_entities.geojson": "data/bh_entities.geojson",
 	"/data/bh_cantons.geojson": "data/bh_cantons.geojson",
