@@ -15,6 +15,7 @@ function main() {
 	let layers = createLayers(map);
 	loadGeoJSONdata(layers);
 	addLayersToMap(map, layers);
+	loadLocalStorage();
 }
 main();
 
@@ -137,14 +138,15 @@ function addLayersToMap(map, layers) {
 	}, { position: "bottomleft" }).addTo(map);
 }
 
-function placeCircle(lat, lng, radius) {
-	const parsed = parseRRGGBBAA(CIRCLE_DEFAULT_COLOR);
+function placeCircle(lat, lng, radius, color) {
+	const parsed = parseRRGGBBAA(color);
 	circle = L.circle([lat, lng], {
 	  radius,
 	  color: parsed.stroke,
 	  fillColor: parsed.fill,
 	  fillOpacity: parsed.fillOpacity
 	}).addTo(drawnItems);
+	return circle;
 }
 
 function updateMarkerDropdowns() {
@@ -168,7 +170,7 @@ function placeMarker(lat, lng, name) {
   	.bindPopup(`<b>${name}</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`);
 }
 
-function addMarkerToList(name, circle) {
+function addMarkerToList(marker, name, circle) {
 	const li = document.createElement('li');
 	li.style.cursor = 'pointer';
 	
@@ -231,6 +233,7 @@ function addMarkerToList(name, circle) {
 	
 	  li.remove();
 	  markers = markers.filter(m => m.marker !== marker);
+		updateLocalStorage();
 	
 	  updateMarkerDropdowns();
 	});
@@ -248,6 +251,7 @@ function addLineToList(idx1, idx2, line, distanceMeters) {
     drawnItems.removeLayer(line);
     li.remove();
     lines = lines.filter(l => l.line !== line);
+		updateLocalStorage();
   });
 
 	li.addEventListener('click', () => {
@@ -261,11 +265,12 @@ function addLineToList(idx1, idx2, line, distanceMeters) {
 	  line,
 	  distance: distanceMeters
 	});
+	updateLocalStorage();
 
   lineList.appendChild(li);
 }
 
-function addLineToMap(m1, m2, distanceMeters) {
+function placeLine(m1, m2, distanceMeters) {
 	const line = L.polyline([m1, m2], {
 	  color: 'red',
 	  weight: 3
@@ -313,7 +318,7 @@ function addEventListeners() {
 	
 		const distanceMeters = m1.distanceTo(m2);
 	
-		addLineToMap(m1, m2, distanceMeters);
+		let line = placeLine(m1, m2, distanceMeters);
 		
 		addLineToList(idx1, idx2, line, distanceMeters);
 	});
@@ -327,24 +332,24 @@ function addEventListeners() {
 	  if (isNaN(lat) || isNaN(lng)) { alert('Enter valid coordinates'); return; }
 	  if (!name) { alert('Enter a name'); return; }
 	
-	  // Place marker
 	  const marker = placeMarker(lat, lng, name);
 	
-	  // Place circle only if radius > 0
-		let circle = radius > 0 ? placeCircle(lat, lng, radius) : null;
+		let circle = radius > 0 ? placeCircle(lat, lng, radius, CIRCLE_DEFAULT_COLOR) : null;
 	
 		markers.push({
 		  name,
 		  marker,
 		  circle,
+			radius,
 		  lat,
 		  lng,
-		  color: CRICLE_DEFAULT_COLOR
+		  color: CIRCLE_DEFAULT_COLOR
 		});
+		updateLocalStorage();
 	
 		updateMarkerDropdowns();
 	
-		addMarkerToList(name, circle);
+		addMarkerToList(marker, name, circle);
 	
 	  markerNameInput.value = '';
 	  if (tempMarker) { drawnItems.removeLayer(tempMarker); tempMarker = null; }
