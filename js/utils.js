@@ -53,17 +53,21 @@ function loadLocalStorage() {
 	});
 	let cleanLines = JSON.parse(localStorage.getItem("lines")) || [];
 	lines = cleanLines.map(line => {
-	  const m1 = markers[line.marker1].marker.getLatLng();
-	  const m2 = markers[line.marker2].marker.getLatLng();
+		let idx1 = markers.findIndex(m => m.name === line.marker1);
+		let idx2 = markers.findIndex(m => m.name === line.marker2);
+		if(idx1 == -1 || idx2 == -1) return null;
+		
+	  const m1 = markers[idx1].marker.getLatLng();
+	  const m2 = markers[idx2].marker.getLatLng();
 		const distanceMeters = m1.distanceTo(m2);
 		let l = placeLine(m1, m2, distanceMeters);
-		addLineToList(line.marker1, line.marker2, l, distanceMeters);
+		addLineToList(idx1, idx2, l, distanceMeters);
 		return {
 	  	marker1: line.marker1,
 	  	marker2: line.marker2,
 			line: l,
 	  	distance: distanceMeters
 		}
-	});
+	}).filter(line => line != null);
 	updateMarkerDropdowns();
 }

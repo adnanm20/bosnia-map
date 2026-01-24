@@ -44,11 +44,11 @@ function loadFromURL() { // TODO: add confirmation screen
 	if (searchParams.has('lines')) {
 		let lns = searchParams.get('lines').split(';');
 		for(l of lns) {
-			// idx1|idx2
-			if(!(/^\d+\|\d+$/.test(l))) continue;
-			if(markers.findIndex(mr => m.name === line[0]) == -1) continue;
-			if(markers.findIndex(mr => m.name === line[1]) == -1) continue;
+			// name|name
+			if(!(/^\w+\|\w+$/.test(l))) continue;
 			let line = l.split('|');
+			if(markers.findIndex(mr => mr.name == line[0]) == -1) continue;
+			if(markers.findIndex(mr => mr.name == line[1]) == -1) continue;
 			lines.push({
 				marker1: line[0],
 				marker2: line[1]
@@ -299,13 +299,6 @@ function addLineToList(idx1, idx2, line, distanceMeters) {
 	  line.openPopup();
 	});
 
-	lines.push({
-	  marker1: markers[idx1].name,
-	  marker2: markers[idx2].name,
-	  line,
-	  distance: distanceMeters
-	});
-	updateLocalStorage();
 
   lineList.appendChild(li);
 }
@@ -362,6 +355,14 @@ function addEventListeners() {
 		const distanceMeters = m1.distanceTo(m2);
 	
 		let line = placeLine(m1, m2, distanceMeters);
+		
+		lines.push({
+		  marker1: name1,
+		  marker2: name2,
+		  line,
+		  distance: distanceMeters
+		});
+		updateLocalStorage();
 		
 		addLineToList(idx1, idx2, line, distanceMeters);
 	});
