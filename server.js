@@ -33,7 +33,7 @@ const MIME_TYPES = {
 };
 
 http.createServer((req, res) => {
-  const fileName = FILES[req.url];
+  const fileName = FILES[req.url.split('?')[0]];
 
   if (!fileName) {
     res.writeHead(404);

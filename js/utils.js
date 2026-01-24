@@ -30,8 +30,7 @@ function updateLocalStorage() {
 	localStorage.setItem("markers", JSON.stringify(cleanMarkers));
 	let cleanLines = lines.map(line => ({
 	  marker1: line.marker1,
-	  marker2: line.marker2,
-	  distance: line.distance
+	  marker2: line.marker2
 	}));
 	localStorage.setItem("lines", JSON.stringify(cleanLines));
 }
@@ -56,13 +55,14 @@ function loadLocalStorage() {
 	lines = cleanLines.map(line => {
 	  const m1 = markers[line.marker1].marker.getLatLng();
 	  const m2 = markers[line.marker2].marker.getLatLng();
-		let l = placeLine(m1, m2, line.distance);
-		addLineToList(line.marker1, line.marker2, l, line.distance);
+		const distanceMeters = m1.distanceTo(m2);
+		let l = placeLine(m1, m2, distanceMeters);
+		addLineToList(line.marker1, line.marker2, l, distanceMeters);
 		return {
 	  	marker1: line.marker1,
 	  	marker2: line.marker2,
 			line: l,
-	  	distance: line.distance
+	  	distance: distanceMeters
 		}
 	});
 	updateMarkerDropdowns();

@@ -10,14 +10,54 @@ let markers = [];
 let tempMarker = null;
 
 function main() {
+	loadLocalStorage();
+	if(loadFromURL()) {
+		window.location = window.location.href.split("?")[0];
+	}
 	addEventListeners();
 	let map = initializeMap();
 	let layers = createLayers(map);
 	loadGeoJSONdata(layers);
 	addLayersToMap(map, layers);
-	loadLocalStorage();
 }
 main();
+
+function loadFromURL() { // TODO: add confirmation screen
+	if (window.location.search == '') return false;
+	const searchParams = new URLSearchParams(window.location.search);
+	if (searchParams.has('markers')) {
+		let mks = searchParams.get('markers').split(';');
+		for(m of mks) {
+			// name|lat|lng|rad|color
+			if(!(/^\w+\|[\d+\.]+\|[\d+\.]+\|\d+\|\w+$/.test(m))) continue;
+			let marker = m.split('|');
+			if(markers.findIndex(mr => m.name === marker[0]) != -1) continue; // TODO: add renaming to confirmation screen
+			markers.push({
+				name: marker[0],
+				lat: Number(marker[1]),
+				lng: Number(marker[2]),
+				radius: Number(marker[3]),
+				color: marker[4]
+			});
+		}
+	}
+	if (searchParams.has('lines')) {
+		let lns = searchParams.get('lines').split(';');
+		for(l of lns) {
+			// idx1|idx2
+			if(!(/^\d+\|\d+$/.test(l))) continue;
+			if(markers.findIndex(mr => m.name === line[0]) == -1) continue;
+			if(markers.findIndex(mr => m.name === line[1]) == -1) continue;
+			let line = l.split('|');
+			lines.push({
+				marker1: line[0],
+				marker2: line[1]
+			});
+		}
+	}
+	updateLocalStorage();
+	return true;
+}
 
 function initializeMap() {
 	const map = L.map('map', {
@@ -159,7 +199,7 @@ function updateMarkerDropdowns() {
   });
 
   markers.forEach((m, idx) => {
-    const option = `<option value="${idx}">${m.name}</option>`;
+    const option = `<option value="${m.name}">${m.name}</option>`;
     select1.innerHTML += option;
     select2.innerHTML += option;
   });
@@ -223,13 +263,13 @@ function addMarkerToList(marker, name, circle) {
 	  drawnItems.removeLayer(marker);
 	  if (circle) drawnItems.removeLayer(circle);
 	
-	  lines.filter(l => l.marker1 == idx || l.marker2 == idx).forEach(l => {
+	  lines.filter(l => l.marker1 == name || l.marker2 == name).forEach(l => {
 	    drawnItems.removeLayer(l.line);
 	    Array.from(lineList.children).forEach(li => {
-	      if (li.textContent.includes(markers[idx].name)) li.remove();
+	      if (li.textContent.includes(name)) li.remove();
 	    });
 	  });
-	  lines = lines.filter(l => l.marker1 != idx && l.marker2 != idx);
+	  lines = lines.filter(l => l.marker1 != name && l.marker2 != name);
 	
 	  li.remove();
 	  markers = markers.filter(m => m.marker !== marker);
@@ -260,8 +300,8 @@ function addLineToList(idx1, idx2, line, distanceMeters) {
 	});
 
 	lines.push({
-	  marker1: idx1,
-	  marker2: idx2,
+	  marker1: markers[idx1].name,
+	  marker2: markers[idx2].name,
 	  line,
 	  distance: distanceMeters
 	});
@@ -301,8 +341,11 @@ function addEventListeners() {
 	});
 	
 	document.getElementById('connectMarkersBtn').addEventListener('click', () => {
-	  const idx1 = document.getElementById('lineMarker1').value;
-	  const idx2 = document.getElementById('lineMarker2').value;
+	  const name1 = document.getElementById('lineMarker1').value;
+	  const name2 = document.getElementById('lineMarker2').value;
+
+		let idx1 = markers.findIndex(m => m.name === name1);
+		let idx2 = markers.findIndex(m => m.name === name2);
 	
 	  if (idx1 === "" || idx2 === "") {
 	    alert("Please select both markers");
@@ -331,6 +374,8 @@ function addEventListeners() {
 	
 	  if (isNaN(lat) || isNaN(lng)) { alert('Enter valid coordinates'); return; }
 	  if (!name) { alert('Enter a name'); return; }
+	  if (markers.findIndex(m => m.name === name) != -1) { alert('Marker names have to be unique'); return; }
+	  if (!(/\w+/.test(name))) { alert('Name can only contain letters and numbers'); return; }
 	
 	  const marker = placeMarker(lat, lng, name);
 	
@@ -353,5 +398,31 @@ function addEventListeners() {
 	
 	  markerNameInput.value = '';
 	  if (tempMarker) { drawnItems.removeLayer(tempMarker); tempMarker = null; }
+	});
+	
+	document.getElementById('shareBtn').addEventListener('click', () => {
+		let shareUrl = window.location.href + "?markers=";
+
+		for(marker of markers) {
+			shareUrl += `${marker.name}|${marker.lat}|${marker.lng}|${marker.radius}|${marker.color};`
+		}
+
+		shareUrl += "&lines=";
+
+		for(line of lines) {
+			shareUrl += `${line.marker1}|${line.marker2};`
+		}
+
+  	navigator.clipboard.writeText(shareUrl);
+		alert("Url copied to clipboard");
+	});
+
+	document.getElementById('clearBtn').addEventListener('click', () => {
+		markers = [];
+		lines = [];
+		markerList.innerHTML = '';
+		lineList.innerHTML = '';
+		drawnItems.clearLayers();
+		updateLocalStorage();
 	});
 }
