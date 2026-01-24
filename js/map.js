@@ -423,6 +423,7 @@ function addEventListeners() {
 		markerList.innerHTML = '';
 		lineList.innerHTML = '';
 		drawnItems.clearLayers();
+		updateMarkerDropdowns();
 		updateLocalStorage();
 	});
 }
