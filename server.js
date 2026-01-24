@@ -51,7 +51,7 @@ http.createServer((req, res) => {
     const ext = path.extname(fileName);
     res.writeHead(200, {
       "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-      "Cache-Control": "public, max-age=3600",
+      "Cache-Control": "no-cache",
     });
 
     res.end(data);
