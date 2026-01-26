@@ -264,6 +264,7 @@ function addMarkerToList(marker, name, circle) {
 	  if (circle) drawnItems.removeLayer(circle);
 	
 	  lines.filter(l => l.marker1 == name || l.marker2 == name).forEach(l => {
+			console.log(l);
 	    drawnItems.removeLayer(l.line);
 	    Array.from(lineList.children).forEach(li => {
 	      if (li.textContent.includes(name)) li.remove();
@@ -310,6 +311,8 @@ function placeLine(m1, m2, distanceMeters) {
 	}).addTo(drawnItems);
 	
 	line.bindPopup(`Distance: ${formatDistance(distanceMeters)}`);
+
+	return line;
 }
 
 function fillCoordinateFields(e) {
